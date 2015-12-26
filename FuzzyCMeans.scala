@@ -24,7 +24,7 @@ import org.apache.spark.mllib.linalg.{Vectors, Vector}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.storage.StorageLevel
 import breeze.linalg.{ DenseVector => BDV, Vector => BV}
-
+import org.apache.spark.mllib.util.MLUtils
 
 /**
  *
@@ -44,7 +44,7 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
 // private var seed: Long)
   extends Serializable with Logging {
 
-  def this() = this(2, 20, 1e-4, 2)
+  def this() = this(2, 20, 1e-4, 2.0)
 
   /**
    * Returns the number of clusters
@@ -300,19 +300,20 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
     val new_centers = centers
 
     // go over all candidates and repalce if needed:
+        
     for (j <- 0 until clustersNum) {
       if (center_candidates(j)._2 != 0) {
 
         // create new center candidate:
         var dense_vec1: BDV[Double] = new BDV(center_candidates(j)._1.toArray)
         dense_vec1 /= center_candidates(j)._2
-        val newCenter = new VectorWithNorm(dense_vec1.toArray)
+        val newCenter: VectorWithNorm = new VectorWithNorm(dense_vec1.toArray)              
 
-        if (KMeans.fastSquaredDistance(newCenter, centers(j)) > epsilon * epsilon) {
+        if (MLUtils.fastSquaredDistance(newCenter.vector, 2.0, centers(j).vector, 2.0) > epsilon*epsilon) {
           // in case the distance is greater than epsilon^2 we should replace the current center
           center_changed = true
+          new_centers(j) = newCenter
         }
-        new_centers(j) = newCenter
       }
     }
     (new_centers, center_changed)
@@ -342,15 +343,20 @@ object FuzzyCMeans {
    */
   def train(
       data: RDD[Vector],
-      clusterNum: Int,
+      clusters: Int,
       fuzzynessCoefficient: Double,
-      maxIterations: Int,
-      epsilon: Double): FuzzyCMeansModel = {
-    new FuzzyCKMeans().setClustersNum(clusterNum)
+      maxIterations: Int): FuzzyCMeansModel = {
+    new FuzzyCKMeans().setClustersNum(clusters)
       .setFuzzynessCoefficient(fuzzynessCoefficient)
-      .setMaxIterations(maxIterations)
-      .setEplison(epsilon)
+      .setMaxIterations(maxIterations)      
       .run(data)
+  }
+
+  def train(
+      data: RDD[Vector],
+      clusters: Int,
+      maxIterations: Int): FuzzyCMeansModel = {
+    train(data, clusters, 2.0, maxIterations)
   }
 
   def getFuzzynessCoefficient: Double = FuzzyCMeans.getFuzzynessCoefficient
