@@ -156,8 +156,7 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
    * @param data input data to the algorithm
    * @return FuzzyCMeansModel with the results of the run
    */
-  private def runAlgorithm(data: RDD[VectorWithNorm]): FuzzyCMeansModel = {
-
+  private def runAlgorithm(data: RDD[VectorWithNorm]): FuzzyCMeansModel = {    
     val sc = data.sparkContext
     val initStartTime = System.nanoTime()
 
@@ -176,7 +175,8 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
     // Algorithm should stop if it is converged or exceeded the maximum number of iterations
     while(iteration < maxIterations && !converged) {
       // broadcast the centers to all the machines
-      val broadcasted_centers = sc.broadcast(centers)
+      val broadcasted_centers = sc.broadcast(centers)      
+        
       val center_candidates = newCenterCalculation(data, broadcasted_centers)
 
       // Update centers:  updates_results  = (new_centers, is_changed)
@@ -242,14 +242,18 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
       val point_distance_normalization = Array.fill[Double](clustersNum)(0)
 
       data_ponts.foreach { data_point =>
-
+        
+        //  workaround: unless we copy the array, the data_point will be changed
+        var arr:Array[Double] = data_point.vector.toArray
+        val temp_point = new VectorWithNorm(arr.clone)
+        // val temp_point = new VectorWithNorm(data_point.vector)
         var total_distance = 0.0
 
         // computation of the distance of data_point from each cluster:
         for (j <- 0 until clustersNum) {
           // the distance of data_point from cluster j:
           val cluster_to_point_distance =
-            KMeans.fastSquaredDistance(broadcasted_centers.value(j), data_point)
+            KMeans.fastSquaredDistance(broadcasted_centers.value(j), temp_point)
           point_distance(j) = math.pow(cluster_to_point_distance, 1/( fuzzynessCoefficient - 1))
 
           // update the total_distance:
@@ -265,16 +269,17 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
 
           // calculation of (u_ij)^m:
           val u_i_j_m: Double = math.pow(point_distance(j) * total_distance, -fuzzynessCoefficient)
+          // val u_i_j_m: Double = 1.0
 
-          var dense_vec1: BDV[Double] = new BDV(data_point.vector.toArray)
-          dense_vec1 *= u_i_j_m
+          var dense_vec1: BDV[Double] = new BDV(temp_point.vector.toArray)
+          dense_vec1 *= u_i_j_m          
           actual_cluster_to_point_distance(j) += dense_vec1
           point_distance_normalization(j) += u_i_j_m
         }
       }
 
       val out_tuple = for (j <- 0 until clustersNum) yield {
-        (j, (actual_cluster_to_point_distance(j), point_distance_normalization(j)))
+        (j, (actual_cluster_to_point_distance(j), point_distance_normalization(j)))        
       }
       out_tuple.iterator
 
