@@ -93,6 +93,25 @@ class FuzzyCMeansModel @Since("1.1.0") (@Since("1.0.0") val clusterCenters: Arra
     ui
   }
 
+
+  def getMembershipMatrix(data: RDD[Vector]) : Array[Array[Double]] = {
+    val norms = data.map(Vectors.norm(_, 2.0))
+    norms.persist()
+    val zippedData = data.zip(norms).map { case (v, norm) =>
+      new VectorWithNorm(v, norm)
+    }
+    // val membershipMatrix = Array
+    // val membershipMatrix = Array.ofDim[Double](zippedData.size, clusterCentersNum())
+    var membershipMatrixBuffer = new ArrayBuffer[Array[Double]]()
+
+    zippedData.foreach { data_point =>      
+      val memVector = getMembershipVector(data_point)
+      
+      membershipMatrixBuffer += memVector
+    }
+    membershipMatrixBuffer.toArray
+  }
+
   /**
    *
    * @param data_point The data point you want to get the highest associated center for
