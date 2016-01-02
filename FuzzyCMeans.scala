@@ -252,8 +252,8 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
         // computation of the distance of data_point from each cluster:
         for (j <- 0 until clustersNum) {
           // the distance of data_point from cluster j:
-          val cluster_to_point_distance =
-            KMeans.fastSquaredDistance(broadcasted_centers.value(j), temp_point)
+          // we add 0.001 in order not to divide by zero (maybe this should be some Epsilon method?)
+          val cluster_to_point_distance = KMeans.fastSquaredDistance(broadcasted_centers.value(j), temp_point) + 0.001
           point_distance(j) = math.pow(cluster_to_point_distance, 1/( fuzzynessCoefficient - 1))
 
           // update the total_distance:

@@ -28,6 +28,10 @@ import org.apache.spark.mllib.util.{Loader, Saveable}
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.sql.Row
+import org.apache.spark.rdd.RDD
+import org.apache.spark.mllib.linalg.{Vectors, Vector}
+import scala.collection.mutable.ArrayBuffer
+import org.apache.spark.mllib.util.MLUtils
 
 
 /**
@@ -111,6 +115,81 @@ class FuzzyCMeansModel @Since("1.1.0") (@Since("1.0.0") val clusterCenters: Arra
     }
     membershipMatrixBuffer.toArray
   }
+
+    def predictCenters(data: RDD[Vector]): RDD[Int] = {
+    data.map(p => findClosestCenter(p) )
+  }
+
+  def findClosestCenter(point: Vector) : Int = {
+    var min:Double = 1000
+    var min_idx:Int = 0
+    for (i <- 0 until clusterCentersNum() ) {
+      val dist = MLUtils.fastSquaredDistance(point, 2.0, clusterCenters(i), 2.0)
+      if(dist < min) {
+        min = dist
+        min_idx = i
+      }
+    }
+    min_idx
+  }
+
+  def predictValues(data: RDD[Vector]): RDD[Double] = {
+    data.map(p => findClosestCenterValue(p) )
+  }
+
+  def findClosestCenterValue(point: Vector) : Double = {
+    var min:Double = 1000
+    var min_idx:Int = 0
+    for (i <- 0 until clusterCentersNum() ) {
+      val dist = MLUtils.fastSquaredDistance(point, 2.0, clusterCenters(i), 2.0)
+      if(dist < min) {
+        min = dist
+        min_idx = i
+      }
+    }
+    min
+  }
+
+
+  def predictAll(data: RDD[Vector]) : RDD[Array[Double]] = {
+    data.map(p => findAll(p))
+  }
+
+  def findAll(point: Vector): Array[Double] = {
+    
+    val membershipVec = Array.fill[Double](clusterCentersNum)(0.0)
+    for (i <- 0 until clusterCentersNum() ) {
+      val dist = MLUtils.fastSquaredDistance(point, 2.0, clusterCenters(i), 2.0)
+      membershipVec(i) = dist
+    }
+    membershipVec
+  }
+
+
+  def predictMatrix(data: RDD[Vector]) : RDD[Array[Double]] = {
+    data.map(p => findVector(p))
+  }
+
+  def findVector(point: Vector) : Array[Double] = {
+    val membershipVec = Array.fill[Double](clusterCentersNum)(0.0)
+    val point_distance = Array.fill[Double](clusterCentersNum)(0)
+    var total_distance = 0.0
+
+    for(i <- 0 until clusterCentersNum) {
+      val dist = MLUtils.fastSquaredDistance(point, 2.0, clusterCenters(i), 2.0) + 0.001
+      point_distance(i) = math.pow(dist, 1/( FuzzyCMeans.getFuzzynessCoefficient - 1))      
+      total_distance += (1 / point_distance(i))
+
+    }
+
+    for(i <- 0 until clusterCentersNum) {
+      val u_i_j_m = math.pow(point_distance(i) * total_distance, -FuzzyCMeans.getFuzzynessCoefficient)
+      membershipVec(i) = u_i_j_m
+    }
+    membershipVec
+  }
+
+
 
   /**
    *
