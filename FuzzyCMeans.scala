@@ -363,7 +363,6 @@ object FuzzyCMeans {
     train(data, clusters, 2.0, maxIterations)
   }
 
-  // def getFuzzyness: Double = FuzzyCMeans.getFuzzynessCoefficient
-  def getFuzzyness: Double = 2.0
+  def getFuzzynessCoefficient: Double = FuzzyCMeans.getFuzzynessCoefficient
 
 }
