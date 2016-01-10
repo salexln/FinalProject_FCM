@@ -223,8 +223,8 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
        * Single vector from the membership matrix * data_point:
        * actual_cluster_to_point_distance(j) = x_i * u_i_j_m
        */
-    val actual_cluster_to_point_distance = Array.fill(clustersNum)(BDV.zeros[Double](data_dim )
-        .asInstanceOf[BV[Double]])
+      val actual_cluster_to_point_distance = Array.fill(clustersNum)(BDV.zeros[Double](data_dim )
+                                                                       .asInstanceOf[BV[Double]])
 
       /**
        * Represents for each point the distance from all the clusters:

@@ -86,8 +86,10 @@ class FuzzyCMeansModel(val clusterCenters: Array[Vector])
     }
 
     for(i <- 0 until clusterCentersNum) {
-      val u_i_j_m = math.pow(point_distance(i) * total_distance, -FuzzyCMeans.getFuzzynessCoefficient)
-      membershipVec(i) = u_i_j_m
+      // val u_i_j_m = math.pow(point_distance(i) * total_distance, -FuzzyCMeans.getFuzzynessCoefficient)
+      // val u_i_j = point_distance(i) * total_distance
+      val u_i_j = math.pow(point_distance(i) * total_distance, -1)
+      membershipVec(i) = u_i_j
     }
     membershipVec
   }
