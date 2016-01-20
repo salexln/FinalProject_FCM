@@ -44,7 +44,7 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
 // private var seed: Long)
   extends Serializable with Logging {
 
-  def this() = this(2, 20, 1e-4, 2.0)
+  def this() = this(0, 0, 1e-4, 0.0)
 
   /**
    * Returns the number of clusters
@@ -115,7 +115,7 @@ class FuzzyCKMeans private ( private var clustersNum: Int,
    * @return
    */
   def setFuzzynessCoefficient(coeficient: Double): this.type = {
-    if (coeficient < 0) {
+    if (coeficient <= 1) {
       throw new IllegalArgumentException("Fuzzyness coefficient must be bigger than 1")
     }
     this.fuzzynessCoefficient = coeficient
@@ -345,24 +345,21 @@ object FuzzyCMeans {
    * @param epsilon termination criterion (between 0 and 1)
 
    */
+  
+  private var fuzzyness_coefficient: Double = 0.0
+
   def train(
       data: RDD[Vector],
-      clusters: Int,
-      fuzzynessCoefficient: Double,
-      maxIterations: Int): FuzzyCMeansModel = {
+      clusters: Int,      
+      maxIterations: Int,
+      fuzzynessCoefficient: Double): FuzzyCMeansModel = {
+    fuzzyness_coefficient = fuzzynessCoefficient
     new FuzzyCKMeans().setClustersNum(clusters)
-      .setFuzzynessCoefficient(fuzzynessCoefficient)
+      .setFuzzynessCoefficient(fuzzyness_coefficient)
       .setMaxIterations(maxIterations)      
       .run(data)
   }
 
-  def train(
-      data: RDD[Vector],
-      clusters: Int,
-      maxIterations: Int): FuzzyCMeansModel = {
-    train(data, clusters, 2.0, maxIterations)
-  }
-
-  def getFuzzynessCoefficient: Double = 2
+  def getFuzzynessCoefficient: Double = fuzzyness_coefficient
 
 }
