@@ -141,7 +141,8 @@ object FuzzyCMeansModel  extends Loader[FuzzyCMeansModel] {
       val c = (metadata \ "c").extract[Int]
       val centroids = sqlContext.read.parquet(Loader.dataPath(path))
       Loader.checkSchema[Cluster](centroids.schema)
-      val localCentroids = centroids.map(Cluster.apply).collect()
+      // val localCentroids = centroids.map(Cluster.apply).collect()
+      val localCentroids = centroids.rdd.map(Cluster.apply).collect()
       assert(c == localCentroids.length)
       new FuzzyCMeansModel(localCentroids.sortBy(_.id).map(_.point))
     }
